@@ -4,20 +4,16 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 /**
- * helper class for built-in motor encoders
+ * Simple helper for using a motor encoder to track distance.
  */
 public class Encoder {
 
     private DcMotor motor;
 
-    // How many ticks per motor revolution
     private double ticksPerRev;
-
-    // wheel in inches
     private double wheelDiameterInches;
 
-    public Encoder(HardwareMap hardwareMap, String motorName, double ticksPerRev, double wheelDiameterInches)
-    {
+    public Encoder(HardwareMap hardwareMap, String motorName, double ticksPerRev, double wheelDiameterInches) {
         this.motor = hardwareMap.get(DcMotor.class, motorName);
         this.ticksPerRev = ticksPerRev;
         this.wheelDiameterInches = wheelDiameterInches;
@@ -26,52 +22,66 @@ public class Encoder {
     }
 
     /**
-     * Get the current encoder ticks.
+     * Get current encoder ticks.
      */
-    public int getTicks()
-    {
+    public int getTicks() {
         return motor.getCurrentPosition();
     }
 
     /**
-     * Convert current encoder position to inches.
+     * Convert ticks to inches.
      */
-    public double getInches()
-    {
+    public double ticksToInches(int ticks) {
+        double wheelCircumference = Math.PI * wheelDiameterInches;
+        return (ticks / ticksPerRev) * wheelCircumference;
+    }
+
+    /**
+     * Get current distance in inches.
+     */
+    public double getInches() {
         return ticksToInches(getTicks());
     }
 
     /**
-     * Reset encoder to zero.
+     * Reset the encoder.
      */
-    public void reset()
-    {
+    public void reset() {
         motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     /**
-     * Helper to convert ticks to inches.
+     * Expose the motor for manual control in your OpMode.
      */
-    public double ticksToInches(int ticks)
-    {
-        double wheelCircumference = Math.PI * wheelDiameterInches;
-        return (ticks / ticksPerRev) * wheelCircumference;
+    public DcMotor getMotor() {
+        return motor;
     }
 
-    public int correctPosition(int curentPostition, int targetPostion)
-    {
-        if (curentPostition == targetPostion)
-        {
-            return 0;
-        }
-        else if (curentPostition <= targetPostion)
-        {
-            return targetPostion-curentPostition;
-        }
-        else
-        {
-            return curentPostition - targetPostion;
-        }
+    /**
+     * Checks if current ticks are within allowed error of target.
+     */
+    public boolean atTarget(int targetTicks, int tolerance) {
+        return Math.abs(getTicks() - targetTicks) <= tolerance;
     }
+
+    /**
+     *  * Example usage:
+     *  *
+     *  * Encoder encoder = new Encoder(hardwareMap, "motorName", 537.7, 4.0);
+     *  *
+     *  * waitForStart();
+     *  *
+     *  * int targetTicks = 1000;
+     *  *
+     *  * while (opModeIsActive() && !encoder.atTarget(targetTicks, 10)) {
+     *  *     int current = encoder.getTicks();
+     *  *     double error = targetTicks - current;
+     *  *     double power = 0.002 * error; // Example P-control, you tune this!
+     *  *     encoder.getMotor().setPower(power);
+     *  * }
+     *  *
+     *  * encoder.getMotor().setPower(0);
+     *  */
 }
+
