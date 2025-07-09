@@ -1,90 +1,111 @@
-# Byte Forge FTC Robot Controller
+---
 
-This repository contains the FTC robot code for Byte Forge Robotics. It includes:
-
-- Core drivetrain and encoder helper classes  
-- Support for 4-motor drive systems (mecanum or omniwheels)  
-- Utilities to work with motor encoders for precise movement and corrections  
-- Placeholders for autonomous and teleop OpModes
+## 📂 **Package:** `org.firstinspires.ftc.teamcode.Auto`
 
 ---
 
-## Project Structure
+## 📄 **Class: `AutoScript`**
 
-```
+### **Purpose**
 
-TeamCode/
-src/main/java/org/firstinspires/ftc/teamcode/
-encoder/
-Encoder.java           # Helper class to manage motor encoders
-drive/
-DriveBase.java         # Wrapper for 4 motor drivetrain with encoders
-opmodes/
-(Your autonomous and teleop OpModes go here)
-build.gradle              # Gradle build configuration
+Holds the predefined autonomous commands as an array of strings.
+Acts as a basic script source for the robot to read and execute.
 
-````
+### **Key Field**
 
----
+| Field   | Type       | Description                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------- |
+| `LINES` | `String[]` | An array of command lines that define an autonomous path or reusable functions. |
 
-## Getting Started
-
-1. **Set up your hardware** in the `DriveBase` constructor:
-
-   Adjust `ticksPerRev` and `wheelDiameterInches` according to your motors and wheels.
-
-2. **Create and reset your drive system** in your OpMode:
-
-   DriveBase drive = new DriveBase(hardwareMap);
-   drive.resetEncoders();
-
-
-3. **Drive and control the robot**:
-
-   Use `drive.setPower()` to control motors. Use encoder readings from `drive.getAverageInches()` or individual encoders for corrections.
-
-4. **Implement your movement logic** with optional correction loops based on encoder feedback.
-
----
-
-## Example Usage Snippet
+### **Example Script**
 
 ```java
-DriveBase drive = new DriveBase(hardwareMap);
-drive.resetEncoders();
-
-double targetInches = 24;
-
-while (opModeIsActive() && drive.getAverageInches() < targetInches) {
-    drive.setPower(0.5, 0.5, 0.5, 0.5);
-
-    // Optional: Add code here to correct drift by adjusting individual motor powers
-}
-
-drive.setPower(0, 0, 0, 0);
+public static final String[] LINES = {
+    "// Example Auto Script",
+    "func square",
+    "move forward 10",
+    "turn right 90",
+    "move forward 10",
+    "turn right 90",
+    "move forward 10",
+    "turn right 90",
+    "move forward 10",
+    "turn right 90",
+    "endfunc",
+    "call square",
+    "stop"
+};
 ```
 
----
+**What it does:**
 
-## Notes & Tips
-
-* The project **does not include fully automated correction algorithms** — it provides utilities to build those.
-* You are encouraged to **implement PID or proportional control loops** for precise autonomous control.
-* Keep your motor and encoder configurations consistent with your robot’s hardware configuration.
-* Remember to **test your code thoroughly in the driver station and (if possible) simulator** before competitions.
+* Defines a `square` function that makes the robot move in a square.
+* Calls the `square` function once.
+* Stops the OpMode after execution.
 
 ---
 
-## Contributing
+## 📄 **Class: `AutoScriptor`**
 
-* Fork this repo, make changes in branches, and submit pull requests.
-* Follow FTC code style and naming conventions.
-* Document your additions clearly.
+### **Purpose**
+
+Runs the autonomous commands defined in `AutoScript`.
+Parses commands, handles reusable functions, and executes supported robot actions.
+
+### **Key Components**
+
+| Member      | Type                        | Description                               |
+| ----------- | --------------------------- | ----------------------------------------- |
+| `functions` | `Map<String, List<String>>` | Stores parsed custom functions for reuse. |
+
+**Main Method:**
+
+| Method                   | Description                                                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runOpMode()`            | Entry point — runs once when the OpMode starts. Parses each line from `AutoScript.LINES`, stores functions, and calls `path()` to execute commands. |
+| `path(String[] command)` | Parses and executes each supported command (`move`, `turn`, `strafe`, `servo`, `wait`, `log`, `call`, `stop`). Handles function calls recursively.  |
+
+**Supported Commands:**
+
+* `move [direction] [distance]`
+* `turn [direction] [angle]`
+* `strafe [direction] [distance]`
+* `servo [name] [position]`
+* `wait [ms]`
+* `log [message]`
+* `call [functionName]`
+* `stop`
 
 ---
 
-## Team Contacts
+## 📄 **Class: `Commands`**
 
-Byte Forge Robotics
-[GitHub Repository](https://github.com/ByteForgeRobotics/FtcRobotController)
-Contact your team lead for access and questions.
+### **Purpose**
+
+Implements low-level actions that can be called by `AutoScriptor`.
+
+### **Methods**
+
+| Method                                                           | Description                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `move(String direction, String distance, Telemetry telemetry)`   | Displays a log for moving in the specified direction for a distance.            |
+| `turn(String direction, String angle, Telemetry telemetry)`      | Displays a log for turning in the specified direction by an angle.              |
+| `strafe(String direction, String distance, Telemetry telemetry)` | Displays a log for strafing sideways in the specified direction for a distance. |
+| `servo(String name, String position, Telemetry telemetry)`       | Displays a log for setting a servo to a specific position.                      |
+| `waitMillis(String ms, Telemetry telemetry)`                     | Busy-waits for the specified number of milliseconds.                            |
+| `log(String message, Telemetry telemetry)`                       | Logs a custom message to the telemetry.                                         |
+
+---
+
+## ⚙️ **How It Works**
+
+1. `AutoScript` holds the sequence of instructions.
+2. `AutoScriptor` runs each line:
+
+   * Stores reusable functions (`func` ... `endfunc`).
+   * Runs immediate commands.
+   * Supports `call` to reuse functions.
+3. `Commands` defines the primitive robot actions — you can expand these to actually move hardware instead of just logging.
+
+---
+
