@@ -3,69 +3,29 @@ package org.firstinspires.ftc.teamcode.Auto;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+
 import java.util.*;
 
-/**
- * Autonomous OpMode that parses and runs auto script functions defined in AutoScript.LINES.
- *
- * <p>Features a gamepad selector to choose which auto function to run before start.</p>
- *
- * Usage:
- * <ul>
- * <li>Deploy as an FTC autonomous OpMode.</li>
- * <li>On init, it parses functions from AutoScript.LINES.</li>
- * <li>User selects a function using gamepad D-pad up/down.</li>
- * <li>On start, executes the selected function line-by-line.</li>
- * </ul>
- */
 @Autonomous(name = "AutoScriptor")
 public class AutoScriptor extends LinearOpMode {
 
-    /** Map of function names to list of command lines */
-    static Map<String, List<String>> functions = new HashMap<>();
-
-    private ColorSensor colorSensor;
-    private String selectedFunc = "";
+    private Map<String, String> scripts = new HashMap<>();
+    private String selectedScriptName = "";
     private DriveBase driveBase;
 
-    /**
-     * Main OpMode execution method.
-     * Initializes hardware, parses functions, allows user to select function, then executes it.
-     */
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.addLine("Loading Auto Scripts...");
         telemetry.update();
 
         driveBase = new DriveBase(hardwareMap);
-        colorSensor = hardwareMap.get(ColorSensor.class, "colorSensorName");
 
-        // Parse functions
-        List<String> availableFuncs = new ArrayList<>();
-        List<String> lines = Arrays.asList(AutoScript.LINES);
-        Iterator<String> iterator = lines.iterator();
+        // Add your scripts here
+        scripts.put("Square", AutoScript.SQUARE);
+        scripts.put("SlideUp", AutoScript.SLIDE_UP);
 
-        while (iterator.hasNext()) {
-            String line = iterator.next().trim();
-            if (line.isEmpty() || line.startsWith("//")) continue;
-
-            String[] parts = line.split(" ");
-            if (parts[0].equalsIgnoreCase("func") && parts.length > 1) {
-                String funcName = parts[1];
-                List<String> funcLines = new ArrayList<>();
-                while (iterator.hasNext()) {
-                    String funcLine = iterator.next().trim();
-                    if (funcLine.equalsIgnoreCase("endfunc")) break;
-                    if (!funcLine.isEmpty() && !funcLine.startsWith("//")) {
-                        funcLines.add(funcLine);
-                    }
-                }
-                functions.put(funcName, funcLines);
-                availableFuncs.add(funcName);
-            }
-        }
-
-        if (availableFuncs.isEmpty()) {
+        List<String> availableScripts = new ArrayList<>(scripts.keySet());
+        if (availableScripts.isEmpty()) {
             telemetry.addLine("No Auto Scripts found!");
             telemetry.update();
             waitForStart();
@@ -73,30 +33,30 @@ public class AutoScriptor extends LinearOpMode {
         }
 
         int index = 0;
-        selectedFunc = availableFuncs.get(index);
+        selectedScriptName = availableScripts.get(index);
 
-        // Function selection loop before start
+        // Selector loop
         while (!isStarted() && !isStopRequested()) {
             boolean updated = false;
 
             if (gamepad1.dpad_up) {
-                index = (index - 1 + availableFuncs.size()) % availableFuncs.size();
-                selectedFunc = availableFuncs.get(index);
+                index = (index - 1 + availableScripts.size()) % availableScripts.size();
+                selectedScriptName = availableScripts.get(index);
                 updated = true;
-                sleep(300); // debounce
+                sleep(300);
             }
 
             if (gamepad1.dpad_down) {
-                index = (index + 1) % availableFuncs.size();
-                selectedFunc = availableFuncs.get(index);
+                index = (index + 1) % availableScripts.size();
+                selectedScriptName = availableScripts.get(index);
                 updated = true;
-                sleep(300); // debounce
+                sleep(300);
             }
 
             if (updated) {
                 telemetry.clear();
                 telemetry.addLine("=== SELECT AUTO SCRIPT ===");
-                telemetry.addData("Selected:", selectedFunc);
+                telemetry.addData("Selected:", selectedScriptName);
                 telemetry.addLine("Use D-Pad UP/DOWN to change");
                 telemetry.update();
             }
@@ -106,15 +66,19 @@ public class AutoScriptor extends LinearOpMode {
 
         waitForStart();
 
-        // Run selected function commands
-        if (selectedFunc != null && !selectedFunc.isEmpty()) {
+        if (selectedScriptName != null && !selectedScriptName.isEmpty()) {
             telemetry.clear();
-            telemetry.addLine("Running Auto Script: " + selectedFunc);
+            telemetry.addLine("Running Auto Script: " + selectedScriptName);
             telemetry.update();
 
-            for (String line : functions.get(selectedFunc)) {
+            String script = scripts.get(selectedScriptName);
+            String[] lines = script.split("\n");
+
+            for (String line : lines) {
                 if (!opModeIsActive()) break;
-                path(line.split(" "));
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("//")) continue;
+                path(trimmed.split(" "));
             }
         } else {
             telemetry.addLine("No Auto Script selected!");
@@ -125,12 +89,6 @@ public class AutoScriptor extends LinearOpMode {
         telemetry.update();
     }
 
-    /**
-     * Parses a command line and dispatches it to the corresponding Commands method.
-     *
-     * @param command The split command line as a string array.
-     * @throws InterruptedException if sleep/wait is interrupted.
-     */
     public void path(String[] command) throws InterruptedException {
         switch (command[0].toLowerCase()) {
             case "move":
